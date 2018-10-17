@@ -125,7 +125,7 @@ describe('model decorator', () => {
     @hasMany(() => Order)
     orders?: Order[];
 
-    @hasOne()
+    @hasOne(() => Order)
     lastOrder?: Order;
 
     @relation({type: RelationType.hasMany})
@@ -292,8 +292,11 @@ describe('model decorator', () => {
         RELATIONS_KEY,
         Customer.prototype,
       ) || /* istanbul ignore next */ {};
-    expect(meta.lastOrder).to.eql({
+    expect(meta.lastOrder).to.containEql({
       type: RelationType.hasOne,
+      name: 'lastOrder',
+      target: () => Order,
+      source: Customer,
     });
   });
 

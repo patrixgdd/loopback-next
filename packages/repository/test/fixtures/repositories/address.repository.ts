@@ -15,11 +15,11 @@ import {CustomerRepository} from '../repositories';
 
 export class AddressRepository extends DefaultCrudRepository<
   Address,
-  typeof Address.prototype.zipcode
+  typeof Address.prototype.customerId
 > {
   public readonly customer: BelongsToAccessor<
     Customer,
-    typeof Address.prototype.zipcode
+    typeof Address.prototype.customerId
   >;
 
   constructor(
@@ -29,7 +29,7 @@ export class AddressRepository extends DefaultCrudRepository<
   ) {
     super(Address, db);
     this.customer = this._createBelongsToAccessorFor(
-      'customerId',
+      'customer',
       customerRepositoryGetter,
     );
   }

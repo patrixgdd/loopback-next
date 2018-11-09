@@ -13,7 +13,7 @@ import {isTypeResolver} from '../../type-resolver';
 import {Getter, HasOneDefinition} from '../relation.types';
 import {DefaultHasOneRepository, HasOneRepository} from './has-one.repository';
 
-const debug = debugFactory('loopback:repository:has-many-repository-factory');
+const debug = debugFactory('loopback:repository:has-one-repository-factory');
 
 export type HasOneRepositoryFactory<Target extends Entity, ForeignKeyType> = (
   fkValue: ForeignKeyType,
@@ -96,6 +96,12 @@ function resolveHasOneMetadata(
     const reason = `target model ${
       targetModel.name
     } is missing definition of foreign key ${defaultFkName}`;
+    throw new InvalidRelationError(reason, relationMeta);
+  }
+
+  const defaultFkProp = targetModel.definition.properties[defaultFkName];
+  if (!defaultFkProp.id || defaultFkProp.generated) {
+    const reason = `foreign key ${defaultFkName} must be an id property that is not auto generated`;
     throw new InvalidRelationError(reason, relationMeta);
   }
 

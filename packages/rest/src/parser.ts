@@ -10,20 +10,17 @@ import {
   ParameterObject,
   SchemasObject,
 } from '@loopback/openapi-v3-types';
-import * as debugModule from 'debug';
-import * as parseUrl from 'parseurl';
-import {parse as parseQuery} from 'qs';
+import * as debugFactory from 'debug';
 import {RequestBody, RequestBodyParser} from './body-parsers';
 import {coerceParameter} from './coercion/coerce-parameter';
 import {RestHttpErrors} from './rest-http-error';
 import {ResolvedRoute} from './router';
 import {OperationArgs, PathParameterValues, Request} from './types';
 import {validateRequestBody} from './validation/request-body.validator';
+const debug = debugFactory('loopback:rest:parser');
 
-const debug = debugModule('loopback:rest:parser');
-
-export const QUERY_NOT_PARSED = {};
-Object.freeze(QUERY_NOT_PARSED);
+// See https://github.com/expressjs/express/blob/master/lib/express.js#L79
+const expressQuery = require('express').query;
 
 /**
  * Parses the request to derive arguments to be passed in for the Application
@@ -106,7 +103,6 @@ function getParamFromRequest(
     case 'header':
       // @jannyhou TBD: check edge cases
       return request.headers[spec.name.toLowerCase()];
-      break;
     // TODO(jannyhou) to support `cookie`,
     // see issue https://github.com/strongloop/loopback-next/issues/997
     default:
@@ -114,14 +110,16 @@ function getParamFromRequest(
   }
 }
 
+/**
+ * This method is mostly used for unit testing where Express is not set up
+ * to parse query string into `request.query` object
+ * @param request
+ */
 function ensureRequestQueryWasParsed(request: Request) {
-  if (request.query && request.query !== QUERY_NOT_PARSED) return;
-
-  const input = parseUrl(request)!.query;
-  if (input && typeof input === 'string') {
-    request.query = parseQuery(input);
-  } else {
-    request.query = {};
-  }
+  if (request.query) return;
+  // Use `express.query` to parse the query string
+  // See https://github.com/expressjs/express/blob/master/lib/express.js#L79
+  // See https://github.com/expressjs/express/blob/master/lib/middleware/query.js
+  expressQuery()(request, {}, () => {});
   debug('Parsed request query: ', request.query);
 }

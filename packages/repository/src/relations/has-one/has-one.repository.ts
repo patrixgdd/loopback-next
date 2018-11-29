@@ -38,7 +38,7 @@ export interface HasOneRepository<Target extends Entity> {
   get(
     filter?: Exclude<Filter<Target>, Where<Target>>,
     options?: Options,
-  ): Promise<Target | undefined>;
+  ): Promise<Target>;
 }
 
 export class DefaultHasOneRepository<

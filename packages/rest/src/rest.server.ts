@@ -127,6 +127,7 @@ export class RestServer extends Context implements Server, HttpServerLike {
   public requestHandler: HttpRequestListener;
 
   public readonly config: RestServerConfig;
+  private _basePath: string;
   protected _httpHandler: HttpHandler;
   protected get httpHandler(): HttpHandler {
     this._setupHandlerIfNeeded();
@@ -186,6 +187,12 @@ export class RestServer extends Context implements Server, HttpServerLike {
       this.sequence(config.sequence);
     }
 
+    let basePath = config.basePath || '';
+    // Trim leading and trailing `/`
+    basePath = basePath.replace(/(^\/)|(\/$)/, '');
+    if (basePath) basePath = '/' + basePath;
+    this._basePath = basePath;
+
     this._setupRequestHandler();
 
     this.bind(RestBindings.HANDLER).toDynamicValue(() => this.httpHandler);
@@ -220,7 +227,7 @@ export class RestServer extends Context implements Server, HttpServerLike {
     this._setupOpenApiSpecEndpoints();
 
     // Mount our router & request handler
-    this._expressApp.use((req, res, next) => {
+    this._expressApp.use(this._basePath, (req, res, next) => {
       this._handleHttpRequest(req, res).catch(next);
     });
 
@@ -374,6 +381,14 @@ export class RestServer extends Context implements Server, HttpServerLike {
       specObj.servers = [{url: this._getUrlForClient(request)}];
     }
 
+    if (specObj.servers && this._basePath) {
+      for (const s of specObj.servers) {
+        if (s.url.startsWith('/')) {
+          s.url = s.url === '/' ? this._basePath : this._basePath + s.url;
+        }
+      }
+    }
+
     if (specForm.format === 'json') {
       const spec = JSON.stringify(specObj, null, 2);
       response.setHeader('content-type', 'application/json; charset=utf-8');
@@ -442,7 +457,7 @@ export class RestServer extends Context implements Server, HttpServerLike {
     // add port number of present
     host += port !== '' ? ':' + port : '';
 
-    return protocol + '://' + host;
+    return protocol + '://' + host + this._basePath;
   }
 
   private async _redirectToSwaggerUI(
@@ -884,6 +899,10 @@ export interface ApiExplorerOptions {
  * Options for RestServer configuration
  */
 export interface RestServerOptions {
+  /**
+   * Base path for API/static routes
+   */
+  basePath?: string;
   cors?: cors.CorsOptions;
   openApiSpec?: OpenApiSpecOptions;
   apiExplorer?: ApiExplorerOptions;

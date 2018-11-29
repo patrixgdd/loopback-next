@@ -701,6 +701,39 @@ paths:
     await server.stop();
   });
 
+  it('allows `basePath` for routes', async () => {
+    const root = ASSETS;
+    const server = await givenAServer({
+      rest: {
+        basePath: '/api',
+        port: 0,
+      },
+    });
+    server.static('/html', root);
+    server.controller(DummyController);
+
+    const content = fs
+      .readFileSync(path.join(root, 'index.html'))
+      .toString('utf-8');
+    await createClientForHandler(server.requestHandler)
+      .get('/api/html/index.html')
+      .expect('Content-Type', /text\/html/)
+      .expect(200, content);
+
+    await createClientForHandler(server.requestHandler)
+      .get('/api/html')
+      .expect(200, 'Hi');
+
+    await createClientForHandler(server.requestHandler)
+      .get('/html')
+      .expect(404);
+
+    const response = await createClientForHandler(server.requestHandler).get(
+      '/openapi.json',
+    );
+    expect(response.body.servers).to.containEql({url: '/api'});
+  });
+
   async function givenAServer(options?: {rest: RestServerConfig}) {
     const app = new Application(options);
     app.component(RestComponent);

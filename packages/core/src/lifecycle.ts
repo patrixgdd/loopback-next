@@ -3,14 +3,19 @@
 // This file is licensed under the MIT License.
 // License text available at https://opensource.org/licenses/MIT
 
-import {Constructor, Binding, BindingScope} from '@loopback/context';
+import {Binding, BindingScope, Constructor} from '@loopback/context';
 import {CoreBindings} from './keys';
+
 /**
  * Observers to handle life cycle start/stop events
  */
 export interface LifeCycleObserver {
+  preStart?(): Promise<void> | void;
   start(): Promise<void> | void;
+  postStart?(): Promise<void> | void;
+  preStop?(): Promise<void> | void;
   stop(): Promise<void> | void;
+  postStop?(): Promise<void> | void;
 }
 
 /**
@@ -30,11 +35,7 @@ export function isLifeCycleObserver(obj: {
 export function isLifeCycleObserverClass(
   ctor: Constructor<unknown>,
 ): ctor is Constructor<LifeCycleObserver> {
-  return (
-    ctor.prototype &&
-    typeof ctor.prototype.start === 'function' &&
-    typeof ctor.prototype.stop === 'function'
-  );
+  return ctor.prototype && isLifeCycleObserver(ctor.prototype);
 }
 
 /**

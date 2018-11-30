@@ -3,20 +3,14 @@
 // This file is licensed under the MIT License.
 // License text available at https://opensource.org/licenses/MIT
 
-import {
-  Binding,
-  BindingScope,
-  BindingType,
-  Constructor,
-  Context,
-} from '@loopback/context';
+import {Binding, BindingScope, Constructor} from '@loopback/context';
 import {Component, mountComponent} from './component';
 import {CoreBindings} from './keys';
 import {
   asLifeCycleObserverBinding,
   isLifeCycleObserverClass,
-  LifeCycleObserver,
 } from './lifecycle';
+import {ContextWithLifeCycle} from './lifecycle-context';
 import {Server} from './server';
 const CoreTags = CoreBindings.Tags;
 import debugFactory = require('debug');
@@ -27,9 +21,9 @@ const debug = debugFactory('loopback:core:application');
  * components, servers, controllers, repositories, datasources, connectors,
  * and models.
  */
-export class Application extends Context implements LifeCycleObserver {
+export class Application extends ContextWithLifeCycle {
   constructor(public options: ApplicationConfig = {}) {
-    super();
+    super('application');
 
     // Bind to self to allow injection of application context in other modules.
     this.bind(CoreBindings.APPLICATION_INSTANCE).to(this);
@@ -138,95 +132,6 @@ export class Application extends Context implements LifeCycleObserver {
       key = `${CoreBindings.SERVERS}.${ctor.name}`;
     }
     return await this.get<T>(key);
-  }
-
-  /**
-   * Start the application, and all of its registered servers.
-   *
-   * @returns {Promise}
-   * @memberof Application
-   */
-  public async start(): Promise<void> {
-    debug('Starting the application...');
-    const bindings = this._findLifeCycleObserverBindings();
-    await this._notifyLifeCycleObservers(bindings, 'start');
-    debug('The application is now started.');
-  }
-
-  /**
-   * Stop the application instance and all of its registered servers.
-   * @returns {Promise}
-   * @memberof Application
-   */
-  public async stop(): Promise<void> {
-    debug('Stopping the application...');
-    const bindings = this._findLifeCycleObserverBindings().reverse();
-    // Stop in the reverse order
-    await this._notifyLifeCycleObservers(bindings, 'stop');
-    debug('The application is now stopped.');
-  }
-
-  /**
-   * Find all life cycle observer bindings. By default, a constant or singleton
-   * binding tagged with `CoreBindings.Tags.LIFE_CYCLE_OBSERVER` or
-   * `CoreBindings.Tags.SERVER`.
-   */
-  protected _findLifeCycleObserverBindings() {
-    const bindings = this.find<LifeCycleObserver>(
-      binding =>
-        (binding.type === BindingType.CONSTANT ||
-          binding.scope === BindingScope.SINGLETON) &&
-        (binding.tagMap[CoreTags.LIFE_CYCLE_OBSERVER] != null ||
-          binding.tagMap[CoreTags.SERVER]),
-    );
-    return this._sortLifeCycleObserverBindings(bindings);
-  }
-
-  /**
-   * Sort the life cycle observer bindings so that we can start/stop them
-   * in the right order. By default, we can start other observers before servers
-   * and stop them in the reverse order
-   * @param bindings Life cycle observer bindings
-   */
-  protected _sortLifeCycleObserverBindings(
-    bindings: Readonly<Binding<LifeCycleObserver>>[],
-  ) {
-    return bindings.sort((b1, b2) => {
-      const tag1 = b1.tagMap[CoreTags.SERVER] || '';
-      const tag2 = b2.tagMap[CoreTags.SERVER] || '';
-      return tag1 > tag2 ? 1 : tag1 < tag2 ? -1 : 0;
-    });
-  }
-
-  /**
-   * Notify each of bindings with the given event
-   * @param bindings An array of bindings for life cycle observers
-   * @param event Event name
-   */
-  protected async _notifyLifeCycleObservers(
-    bindings: Readonly<Binding<LifeCycleObserver>>[],
-    event: keyof LifeCycleObserver,
-  ) {
-    for (const binding of bindings) {
-      const observer = await this.get<LifeCycleObserver>(binding.key);
-      debug('Notifying binding %s of "%s" event...', binding.key, event);
-      await this._invokeLifeCycleObserver(observer, event);
-      debug('Binding %s has processed "%s" event.', binding.key, event);
-    }
-  }
-
-  /**
-   * Invoke an observer for the given event
-   * @param observer A life cycle observer
-   * @param event Event name
-   */
-  protected async _invokeLifeCycleObserver(
-    observer: LifeCycleObserver,
-    event: keyof LifeCycleObserver,
-  ) {
-    if (typeof observer[event] === 'function') {
-      await observer[event]();
-    }
   }
 
   /**

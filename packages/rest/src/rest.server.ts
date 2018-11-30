@@ -124,10 +124,18 @@ export class RestServer extends Context implements Server, HttpServerLike {
    * @param req The request.
    * @param res The response.
    */
-  public requestHandler: HttpRequestListener;
+
+  protected _requestHandler: HttpRequestListener;
+  public get requestHandler(): HttpRequestListener {
+    if (this._requestHandler == null) {
+      this._setupRequestHandlerIfNeeded();
+    }
+    return this._requestHandler;
+  }
 
   public readonly config: RestServerConfig;
   private _basePath: string;
+
   protected _httpHandler: HttpHandler;
   protected get httpHandler(): HttpHandler {
     this._setupHandlerIfNeeded();
@@ -187,18 +195,14 @@ export class RestServer extends Context implements Server, HttpServerLike {
       this.sequence(config.sequence);
     }
 
-    let basePath = config.basePath || '';
-    // Trim leading and trailing `/`
-    basePath = basePath.replace(/(^\/)|(\/$)/, '');
-    if (basePath) basePath = '/' + basePath;
-    this._basePath = basePath;
+    this.basePath(config.basePath);
 
-    this._setupRequestHandler();
-
+    this.bind(RestBindings.BASE_PATH).toDynamicValue(() => this._basePath);
     this.bind(RestBindings.HANDLER).toDynamicValue(() => this.httpHandler);
   }
 
-  protected _setupRequestHandler() {
+  protected _setupRequestHandlerIfNeeded() {
+    if (this._expressApp) return;
     this._expressApp = express();
 
     // Disable express' built-in query parser, we parse queries ourselves
@@ -209,7 +213,7 @@ export class RestServer extends Context implements Server, HttpServerLike {
     // that property to be defined. A static singleton object to the rescue!
     this._expressApp.set('query parser fn', (str: string) => QUERY_NOT_PARSED);
 
-    this.requestHandler = this._expressApp;
+    this._requestHandler = this._expressApp;
 
     // Allow CORS support for all endpoints so that users
     // can test with online SwaggerUI instance
@@ -757,12 +761,30 @@ export class RestServer extends Context implements Server, HttpServerLike {
   }
 
   /**
+   * Configure the `basePath` for the rest server
+   * @param path Base path
+   */
+  basePath(path: string = '') {
+    if (this._requestHandler) {
+      throw new Error(
+        'Base path cannot be set as the request handler has been created',
+      );
+    }
+    // Trim leading and trailing `/`
+    path = path.replace(/(^\/)|(\/$)/, '');
+    if (path) path = '/' + path;
+    this._basePath = path;
+  }
+
+  /**
    * Start this REST API's HTTP/HTTPS server.
    *
    * @returns {Promise<void>}
    * @memberof RestServer
    */
   async start(): Promise<void> {
+    // Set up the Express app if not done yet
+    this._setupRequestHandlerIfNeeded();
     // Setup the HTTP handler so that we can verify the configuration
     // of API spec, controllers and routes at startup time.
     this._setupHandlerIfNeeded();

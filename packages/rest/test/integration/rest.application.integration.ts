@@ -92,6 +92,15 @@ describe('RestApplication (integration)', () => {
       .expect('Hello');
   });
 
+  it('honors basePath', async () => {
+    givenApplication();
+    restApp.basePath('/html');
+    restApp.static('/', ASSETS);
+    await restApp.start();
+    client = createRestAppClient(restApp);
+    await client.get('/html/index.html').expect(200);
+  });
+
   it('returns RestServer instance', async () => {
     givenApplication();
     const restServer = restApp.restServer;

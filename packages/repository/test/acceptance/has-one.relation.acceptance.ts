@@ -4,7 +4,7 @@
 // License text available at https://opensource.org/licenses/MIT
 
 import {Application} from '@loopback/core';
-import {expect} from '@loopback/testlab';
+import {expect, toJSON} from '@loopback/testlab';
 import * as _ from 'lodash';
 import {
   ApplicationWithRepositories,
@@ -15,7 +15,6 @@ import {
 } from '../..';
 import {Address} from '../fixtures/models';
 import {CustomerRepository, AddressRepository} from '../fixtures/repositories';
-import {Where} from '../..';
 
 describe('hasOne relation', () => {
   // Given a Customer and Address models - see definitions at the bottom
@@ -32,9 +31,6 @@ describe('hasOne relation', () => {
 
   beforeEach(async () => {
     await addressRepo.deleteAll();
-  });
-
-  beforeEach(async () => {
     existingCustomerId = (await givenPersistedCustomerInstance()).id;
   });
 
@@ -51,7 +47,7 @@ describe('hasOne relation', () => {
     expect(persisted.toObject()).to.deepEqual(address.toObject());
   });
 
-  it("doesn't allow to create related model instance twice", async () => {
+  it('refuses to create related model instance twice', async () => {
     const address = await controller.createCustomerAddress(existingCustomerId, {
       street: '123 test avenue',
     });
@@ -83,7 +79,7 @@ describe('hasOne relation', () => {
       existingCustomerId,
     );
     expect(foundAddress).to.containEql(address);
-    expect(foundAddress).to.not.containEql(notMyAddress);
+    expect(toJSON(foundAddress)).to.deepEqual(toJSON(address));
 
     const persisted = await addressRepo.find({
       where: {customerId: existingCustomerId},

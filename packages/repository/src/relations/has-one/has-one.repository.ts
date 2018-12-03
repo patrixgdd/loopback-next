@@ -10,8 +10,8 @@ import {Filter, Where} from '../../query';
 import {
   constrainDataObject,
   constrainFilter,
-} from '../../repositories/constraint-utils';
-import {EntityCrudRepository} from '../../repositories/repository';
+  EntityCrudRepository,
+} from '../../repositories';
 import {EntityNotFoundError} from '../../errors';
 
 /**

@@ -11,8 +11,11 @@ import {BelongsToDefinition, RelationType} from '../relation.types';
 
 /**
  * Decorator for belongsTo
- * @param targetResolver
- * @param definition
+ * @param targetResolver A resolver function that retruns the target model for
+ * a belongsTo relation
+ * @param definition Optional metadata for setting up a belongsTo relation
+ * @param propertyMeta Optional property metadata to call the proprety decorator
+ * with
  * @returns {(target: Object, key:string)}
  */
 export function belongsTo<T extends Entity>(

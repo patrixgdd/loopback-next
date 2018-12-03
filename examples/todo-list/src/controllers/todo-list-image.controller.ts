@@ -1,9 +1,9 @@
 import {TodoListRepository} from '../repositories';
-import {repository, Filter} from '@loopback/repository';
+import {repository} from '@loopback/repository';
 import {param, post, requestBody, get} from '@loopback/rest';
 import {TodoListImage} from '../models';
 
-export class TodoListAuthorController {
+export class TodoListImageController {
   constructor(
     @repository(TodoListRepository) protected todoListRepo: TodoListRepository,
   ) {}
